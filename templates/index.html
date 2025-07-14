@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Face Emotion Avatar</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+        #video-container {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 30px;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+        }
+        video, canvas, #mesh-preview {
+            border: 5px solid #3498db;
+            background-color: #000;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease-in-out;
+        }
+        video:hover, canvas:hover, #mesh-preview:hover {
+            transform: scale(1.02);
+        }
+        #emotion-display {
+            font-size: 2.2em;
+            font-weight: bold;
+            color: #2980b9;
+            margin-bottom: 15px;
+            padding: 10px 20px;
+            background-color: #ecf0f1;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        #emotion-label {
+            color: #e74c3c; /* Default color for emotion label */
+        }
+        #emoji-display {
+            font-size: 5em;
+            margin-top: 10px;
+            animation: pulse 1.5s infinite alternate;
+            text-align: center;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.1); }
+        }
+    </style>
+</head>
+<body>
+    <h1>Real-time Face Emotion Avatar</h1>
+    <div id="video-container">
+        <video id="webcam-feed" width="640" height="480" autoplay muted></video>
+        <img id="mesh-preview" width="640" height="480" style="display: none;">
+    </div>
+    <div id="emotion-display">Emotion: <span id="emotion-label">Neutral</span></div>
+    <div id="emoji-display"></div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
