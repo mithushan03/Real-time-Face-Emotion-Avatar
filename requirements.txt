@@ -6,3 +6,5 @@ opencv-python
 mediapipe
 numpy
 opencv-python-headless
+deepface
+tensorflow
