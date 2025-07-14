@@ -127,5 +127,4 @@ def video_feed():
         "mesh_image": mesh_image_base64
     })
 
-if __name__ == '__main__':
-    app.run(debug=True)
+
