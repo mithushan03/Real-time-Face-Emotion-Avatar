@@ -1,6 +1,8 @@
 streamlit
+cv2
 flask
 flask-cors
 opencv-python
 mediapipe
 numpy
+opencv-python-headless
