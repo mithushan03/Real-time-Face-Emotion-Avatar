@@ -86,7 +86,7 @@ def render_shell() -> None:
 
         .topbar {
             display: grid;
-            grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.65fr);
+            grid-template-columns: minmax(0, 1fr);
             gap: 0.85rem;
             align-items: stretch;
             width: 100%;
@@ -101,10 +101,10 @@ def render_shell() -> None:
                 linear-gradient(135deg, rgba(226,170,82,0.14), rgba(76,118,193,0.08));
             box-shadow: var(--shadow);
             overflow: hidden;
-            display: grid;
-            grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
-            gap: 1rem;
-            align-items: end;
+            display: flex;
+            flex-direction: column;
+            gap: 0.7rem;
+            align-items: flex-start;
         }
 
         .hero-kicker {
@@ -120,21 +120,16 @@ def render_shell() -> None:
         }
 
         .hero-title {
-            margin: 0.7rem 0 0.4rem 0;
-            font-size: clamp(2rem, 3vw, 3rem);
+            margin: 0.4rem 0 0.25rem 0;
+            font-size: clamp(2.2rem, 3vw, 3.4rem);
             line-height: 0.98;
         }
 
         .hero-copy {
             color: var(--muted);
-            font-size: 0.98rem;
-            line-height: 1.58;
+            font-size: 0.94rem;
+            line-height: 1.5;
             margin: 0;
-        }
-
-        .hero-side {
-            display: grid;
-            gap: 0.75rem;
         }
 
         .hero-stat {
@@ -166,8 +161,8 @@ def render_shell() -> None:
 
         .workspace-grid {
             display: grid;
-            grid-template-columns: minmax(360px, 0.9fr) minmax(0, 1.1fr);
-            gap: 0.85rem;
+            grid-template-columns: minmax(380px, 0.88fr) minmax(0, 1.12fr);
+            gap: 1rem;
             align-items: start;
         }
 
@@ -195,6 +190,13 @@ def render_shell() -> None:
             color: var(--muted);
             line-height: 1.55;
             font-size: 0.93rem;
+        }
+
+        .section-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.8rem;
         }
 
         .eyebrow {
@@ -281,10 +283,16 @@ def render_shell() -> None:
             background: linear-gradient(135deg, rgba(28,53,86,0.08), rgba(191,108,44,0.08));
         }
 
+        .camera-note {
+            font-size: 0.82rem;
+            color: var(--muted);
+            margin: 0.2rem 0 0 0;
+        }
+
         [data-testid="stImage"] img {
             border-radius: 18px;
             border: 1px solid rgba(31, 41, 51, 0.08);
-            max-height: 52vh;
+            max-height: 54vh;
             object-fit: cover;
         }
 
@@ -391,28 +399,17 @@ st.markdown(
         <div class="topbar">
             <section class="hero">
                 <div>
-                    <span class="hero-kicker">EmotiAvatar • Facial Emotion Analysis</span>
+                    <span class="hero-kicker">EmotiAvatar</span>
                     <h1 class="hero-title">EmotiAvatar</h1>
                     <p class="hero-copy">
-                        A university-grade interactive emotion recognition interface built for
-                        browser-based capture, DeepFace inference, and presentation-quality results.
+                        Capture a selfie, run facial emotion inference, and review the dominant expression.
                     </p>
                 </div>
-                <div class="hero-side">
-                    <div class="hero-stat">
-                        <div class="hero-stat-label">Project Focus</div>
-                        <div class="hero-stat-value">Human emotion detection</div>
-                    </div>
-                    <div class="hero-stat">
-                        <div class="hero-stat-label">Inference Model</div>
-                        <div class="hero-stat-value">DeepFace emotion pipeline</div>
-                    </div>
+                <div class="hero-stat">
+                    <div class="hero-stat-label">Inference Engine</div>
+                    <div class="hero-stat-value">DeepFace emotion analysis</div>
                 </div>
             </section>
-            <div class="hero-stat">
-                <div class="hero-stat-label">Capture Mode</div>
-                <div class="hero-stat-value">Single-shot mirrored selfie</div>
-            </div>
         </div>
     </div>
     """,
@@ -426,12 +423,13 @@ with left_col:
     st.markdown(
         """
         <div class="panel panel-strong">
-            <div class="eyebrow">Capture Interface</div>
-            <h3 class="panel-title">Take Selfie</h3>
-            <p class="panel-copy">
-                Capture a clear portrait frame. EmotiAvatar mirrors the camera input for a familiar
-                selfie experience before sending the image to the emotion analysis pipeline.
-            </p>
+            <div class="section-head">
+                <div>
+                    <div class="eyebrow">Camera Input</div>
+                    <h3 class="panel-title">Take Selfie</h3>
+                </div>
+            </div>
+            <p class="camera-note">Mirrored live view for natural selfie capture.</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -444,11 +442,10 @@ with right_col:
     st.markdown(
         """
         <div class="panel">
-            <div class="eyebrow">Analysis Output</div>
-            <h3 class="panel-title">Emotion Assessment</h3>
+            <div class="eyebrow">Output</div>
+            <h3 class="panel-title">Emotion Result</h3>
             <p class="panel-copy">
-                The result view presents the dominant detected emotion together with a processed
-                mirrored preview from the captured selfie.
+                The captured selfie is analyzed and displayed with the dominant detected emotion.
             </p>
         </div>
         """,
