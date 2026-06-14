@@ -293,6 +293,12 @@ def render_shell() -> None:
             padding: 0.7rem 1.2rem;
         }
 
+        [data-testid="stCameraInput"] video,
+        [data-testid="stCameraInput"] img {
+            transform: scaleX(-1);
+            border-radius: 18px;
+        }
+
         [data-testid="stCaptionContainer"] {
             margin-top: 0.35rem;
         }
