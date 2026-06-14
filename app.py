@@ -1,313 +1,331 @@
 import os
+import base64
+from html import escape
 
+# Reduce TensorFlow console noise. Keep CPU-friendly behavior for Streamlit Cloud.
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "-1")
 
-import streamlit as st
 import cv2
 import numpy as np
-from html import escape
+import streamlit as st
+
+st.set_page_config(
+    page_title="EmotiAvatar",
+    page_icon="😊",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
 
 try:
     from deepface import DeepFace
 except ValueError as exc:
     if "requires tf-keras package" in str(exc):
-        st.set_page_config(page_title="EmotiAvatar", layout="centered")
         st.title("EmotiAvatar")
         st.error(
             "DeepFace could not start because `tf-keras` is missing for the installed "
-            "TensorFlow version. Install dependencies again with "
-            "`pip install -r requirements.txt`."
+            "TensorFlow version. Install dependencies again with `pip install -r requirements.txt`."
         )
         st.stop()
     raise
+except ModuleNotFoundError:
+    st.title("EmotiAvatar")
+    st.error(
+        "DeepFace is not installed. Install your dependencies with `pip install -r requirements.txt`."
+    )
+    st.stop()
 
-st.set_page_config(page_title="EmotiAvatar", layout="wide")
 
 EMOTION_STYLES = {
-    "happy": {"color": "#f59e0b", "accent": "Radiant and upbeat", "emoji": "😊"},
-    "sad": {"color": "#4f7cff", "accent": "Quiet and reflective", "emoji": "😢"},
-    "angry": {"color": "#ef4444", "accent": "High energy and intense", "emoji": "😠"},
-    "surprise": {"color": "#8b5cf6", "accent": "Alert and reactive", "emoji": "😮"},
-    "fear": {"color": "#06b6d4", "accent": "Tense and cautious", "emoji": "😨"},
-    "disgust": {"color": "#ec4899", "accent": "Strong aversion detected", "emoji": "🤢"},
-    "neutral": {"color": "#38bdf8", "accent": "Steady and composed", "emoji": "😐"},
+    "happy": {"color": "#22c55e", "emoji": "😊", "accent": "Radiant and upbeat"},
+    "neutral": {"color": "#3b82f6", "emoji": "😐", "accent": "Steady and composed"},
+    "surprise": {"color": "#8b5cf6", "emoji": "😮", "accent": "Alert and reactive"},
+    "sad": {"color": "#f59e0b", "emoji": "😢", "accent": "Quiet and reflective"},
+    "angry": {"color": "#ef4444", "emoji": "😠", "accent": "High energy and intense"},
+    "fear": {"color": "#06b6d4", "emoji": "😨", "accent": "Tense and cautious"},
+    "disgust": {"color": "#ec4899", "emoji": "🤢", "accent": "Strong aversion detected"},
 }
 
 
-def render_shell() -> None:
+def inject_ui_css() -> None:
     st.markdown(
         """
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Manrope:wght@400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
         :root {
-            --bg: #fff7ed;
-            --ink: #172033;
-            --muted: #5e6777;
-            --panel: rgba(255, 255, 255, 0.96);
-            --line: rgba(247, 149, 51, 0.18);
-            --shadow: 0 22px 60px rgba(240, 124, 32, 0.14);
-            --shadow-soft: 0 12px 30px rgba(31, 41, 55, 0.08);
-            --accent: #f97316;
-            --accent-deep: #c2410c;
-            --green: #22c55e;
-            --navy: #0f172a;
+            --cream: #fff7ed;
+            --cream-2: #fff1df;
+            --ink: #111827;
+            --muted: #64748b;
+            --orange: #f97316;
+            --orange-dark: #c2410c;
+            --navy: #07101d;
+            --panel: rgba(255,255,255,0.95);
+            --line: rgba(249,115,22,0.18);
+            --shadow: 0 22px 55px rgba(120, 72, 20, 0.13);
+            --shadow-soft: 0 12px 30px rgba(17, 24, 39, 0.08);
+        }
+
+        html, body, [class*="css"] {
+            font-family: "Inter", sans-serif;
         }
 
         .stApp {
             background:
-                radial-gradient(circle at top left, rgba(251, 191, 36, 0.18), transparent 22%),
-                radial-gradient(circle at top right, rgba(249, 115, 22, 0.12), transparent 24%),
+                radial-gradient(circle at 10% 5%, rgba(251, 191, 36, 0.22), transparent 24%),
+                radial-gradient(circle at 95% 18%, rgba(249, 115, 22, 0.13), transparent 28%),
                 linear-gradient(180deg, #fffaf4 0%, #fff1df 100%);
             color: var(--ink);
-            font-family: "Manrope", sans-serif;
         }
 
         .block-container {
-            padding-top: 1.1rem;
-            padding-bottom: 0.9rem;
-            padding-left: 1.1rem;
-            padding-right: 1.1rem;
             max-width: 1600px;
-            width: 100%;
+            padding: 1.15rem 1.4rem 1.1rem 1.4rem;
         }
 
-        h1, h2, h3 {
-            font-family: "Space Grotesk", sans-serif;
-            letter-spacing: -0.03em;
+        #MainMenu,
+        footer,
+        header[data-testid="stHeader"] {
+            visibility: hidden;
+            display: none;
         }
 
-        .hero {
+        .hero-card {
             position: relative;
-            padding: 1.8rem 2rem;
+            min-height: 230px;
             border-radius: 28px;
+            padding: 2.15rem 2.4rem;
             background:
-                radial-gradient(circle at 78% 50%, rgba(251, 146, 60, 0.32), transparent 18%),
-                linear-gradient(115deg, #07101d 0%, #141b2b 56%, #f97316 100%);
+                radial-gradient(circle at 82% 45%, rgba(255,177,95,0.35), transparent 20%),
+                linear-gradient(115deg, #07101d 0%, #151c2b 56%, #ff7a1a 100%);
+            color: white;
             box-shadow: var(--shadow);
             overflow: hidden;
             display: grid;
-            grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
-            gap: 1rem;
+            grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
             align-items: center;
-            color: white;
+            gap: 1.2rem;
+            border: 1px solid rgba(255,255,255,0.08);
         }
 
-        .hero-copy-wrap {
-            max-width: 760px;
+        .hero-card::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 88% 18%, rgba(255,255,255,0.12), transparent 16%),
+                radial-gradient(circle at 73% 70%, rgba(255,255,255,0.07), transparent 18%);
+            pointer-events: none;
         }
 
         .hero-title {
+            position: relative;
+            z-index: 2;
             margin: 0;
             display: flex;
             align-items: center;
             gap: 1rem;
-            font-size: clamp(2.4rem, 4vw, 4.1rem);
+            font-size: clamp(2.5rem, 4vw, 4.25rem);
+            font-weight: 900;
+            letter-spacing: -0.07em;
             line-height: 0.95;
         }
 
-        .hero-title-emoji {
-            width: 56px;
-            height: 56px;
+        .hero-logo {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(180deg, #ffe58f, #f59e0b);
+            color: #111827;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            border-radius: 50%;
-            background: linear-gradient(180deg, #fde68a, #f59e0b);
-            box-shadow: inset 0 3px 10px rgba(255, 255, 255, 0.35);
-            font-size: 1.85rem;
+            font-size: 2.1rem;
+            box-shadow: inset 0 4px 10px rgba(255,255,255,0.35), 0 15px 28px rgba(0,0,0,0.18);
             flex: 0 0 auto;
         }
 
-        .hero-title-accent {
+        .hero-accent {
             color: #ffb454;
         }
 
         .hero-copy {
-            color: rgba(255, 255, 255, 0.88);
-            font-size: 0.98rem;
-            line-height: 1.55;
-            margin: 0.95rem 0 1.15rem 0;
-            max-width: 640px;
+            position: relative;
+            z-index: 2;
+            max-width: 650px;
+            color: rgba(255,255,255,0.9);
+            font-size: 1.08rem;
+            line-height: 1.6;
+            margin: 1rem 0 1.25rem 0;
         }
 
         .hero-chips {
+            position: relative;
+            z-index: 2;
             display: flex;
             flex-wrap: wrap;
-            gap: 0.75rem;
+            gap: 0.7rem;
         }
 
         .hero-chip {
             display: inline-flex;
             align-items: center;
-            gap: 0.6rem;
-            padding: 0.8rem 1rem;
+            gap: 0.55rem;
+            padding: 0.78rem 1rem;
             border-radius: 999px;
-            background: rgba(255, 255, 255, 0.10);
-            border: 1px solid rgba(255, 255, 255, 0.20);
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-            font-size: 0.96rem;
-            font-weight: 600;
-            color: rgba(255, 255, 255, 0.95);
+            background: rgba(255,255,255,0.10);
+            border: 1px solid rgba(255,255,255,0.22);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+            color: rgba(255,255,255,0.96);
+            font-size: 0.92rem;
+            font-weight: 700;
         }
 
         .hero-visual {
             position: relative;
-            min-height: 210px;
+            z-index: 2;
+            min-height: 220px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        .hero-avatar-ring {
+        .avatar-orbit {
             position: absolute;
-            inset: 18px;
+            width: 260px;
+            height: 260px;
             border-radius: 50%;
-            border: 1px dashed rgba(255, 196, 120, 0.34);
+            border: 1px dashed rgba(255,224,178,0.38);
         }
 
-        .hero-avatar-ring::before,
-        .hero-avatar-ring::after {
+        .avatar-orbit::before {
             content: "";
             position: absolute;
-            inset: -18px;
+            inset: -24px;
             border-radius: 50%;
-            border: 1px dashed rgba(255, 196, 120, 0.18);
+            border: 1px dashed rgba(255,224,178,0.18);
         }
 
-        .hero-avatar {
+        .avatar-face {
             position: relative;
-            width: 220px;
-            height: 220px;
+            width: 205px;
+            height: 205px;
             border-radius: 50%;
             background:
-                radial-gradient(circle at 35% 30%, #ffddb8 0%, #ffbd8e 24%, #f28a4a 60%, #5c2f1e 100%);
-            box-shadow: 0 24px 50px rgba(0, 0, 0, 0.28);
+                radial-gradient(circle at 38% 30%, #ffe1bd 0 18%, #ffb47e 42%, #dc6f2c 75%, #5c2f1e 100%);
+            box-shadow: 0 26px 50px rgba(0,0,0,0.28);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 7rem;
+            font-size: 7.2rem;
         }
 
-        .hero-bubble {
+        .face-bracket {
             position: absolute;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.92);
-            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.16);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.9rem;
-        }
-
-        .bubble-1 { top: 4px; left: 20px; }
-        .bubble-2 { top: 8px; right: 20px; }
-        .bubble-3 { bottom: 24px; left: 6px; }
-        .bubble-4 { bottom: 26px; right: 8px; }
-
-        .hero-bracket {
-            position: absolute;
-            inset: 20px;
+            inset: 34px;
             pointer-events: none;
         }
 
-        .hero-bracket::before,
-        .hero-bracket::after,
-        .hero-bracket-bottom::before,
-        .hero-bracket-bottom::after {
+        .face-bracket::before,
+        .face-bracket::after,
+        .face-bracket span::before,
+        .face-bracket span::after {
             content: "";
             position: absolute;
-            width: 28px;
-            height: 28px;
+            width: 30px;
+            height: 30px;
+            border-color: rgba(255,255,255,0.95);
+            border-style: solid;
         }
 
-        .hero-bracket::before {
+        .face-bracket::before {
             top: 0;
             left: 0;
-            border-top: 6px solid rgba(255, 255, 255, 0.95);
-            border-left: 6px solid rgba(255, 255, 255, 0.95);
+            border-width: 6px 0 0 6px;
             border-top-left-radius: 14px;
         }
 
-        .hero-bracket::after {
+        .face-bracket::after {
             top: 0;
             right: 0;
-            border-top: 6px solid rgba(255, 255, 255, 0.95);
-            border-right: 6px solid rgba(255, 255, 255, 0.95);
+            border-width: 6px 6px 0 0;
             border-top-right-radius: 14px;
         }
 
-        .hero-bracket-bottom::before {
+        .face-bracket span::before {
             bottom: 0;
             left: 0;
-            border-bottom: 6px solid rgba(255, 255, 255, 0.95);
-            border-left: 6px solid rgba(255, 255, 255, 0.95);
+            border-width: 0 0 6px 6px;
             border-bottom-left-radius: 14px;
         }
 
-        .hero-bracket-bottom::after {
+        .face-bracket span::after {
             bottom: 0;
             right: 0;
-            border-bottom: 6px solid rgba(255, 255, 255, 0.95);
-            border-right: 6px solid rgba(255, 255, 255, 0.95);
+            border-width: 0 6px 6px 0;
             border-bottom-right-radius: 14px;
         }
 
-        .feature-band {
+        .mood-bubble {
+            position: absolute;
+            width: 62px;
+            height: 62px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.92);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            box-shadow: 0 14px 26px rgba(0,0,0,0.17);
+            border: 4px solid rgba(255,255,255,0.45);
+        }
+
+        .bubble-happy { top: 6px; left: 44px; }
+        .bubble-sad { top: 6px; right: 38px; }
+        .bubble-angry { bottom: 28px; left: 12px; }
+        .bubble-surprise { bottom: 32px; right: 2px; }
+
+        .engine-card {
             position: relative;
-            margin-top: 1.15rem;
-            padding: 1.2rem 1.3rem;
+            margin-top: 1.25rem;
+            padding: 1.25rem 1.35rem;
             border-radius: 26px;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 251, 246, 0.95));
-            border: 1px solid rgba(247, 149, 51, 0.18);
+            background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,250,245,0.95));
+            border: 1px solid var(--line);
             box-shadow: var(--shadow-soft);
             overflow: hidden;
         }
 
-        .feature-band::after {
+        .engine-card::before {
             content: "";
             position: absolute;
-            right: -60px;
-            bottom: -42px;
-            width: 42%;
-            height: 140px;
+            right: -3%;
+            bottom: -36px;
+            width: 47%;
+            height: 150px;
             background:
-                radial-gradient(circle at 10px 10px, rgba(249, 115, 22, 0.18) 1.5px, transparent 2px) 0 0 / 10px 10px,
-                linear-gradient(180deg, transparent 0%, rgba(249, 115, 22, 0.06) 100%);
-            mask-image: linear-gradient(90deg, transparent 0%, black 18%);
-            opacity: 0.95;
+                radial-gradient(circle at 10px 10px, rgba(249,115,22,0.18) 1.4px, transparent 2px) 0 0 / 10px 10px,
+                repeating-radial-gradient(ellipse at 0% 100%, transparent 0 28px, rgba(249,115,22,0.26) 29px 30px);
+            mask-image: linear-gradient(90deg, transparent 0%, #000 24%);
+            opacity: 0.82;
         }
 
-        .feature-band::before {
-            content: "";
-            position: absolute;
-            right: 0;
-            bottom: 10px;
-            width: 44%;
-            height: 90px;
-            background:
-                radial-gradient(120px 36px at 0 100%, transparent 68%, rgba(249, 115, 22, 0.32) 69%, transparent 71%) 0 0 / 140px 36px repeat-x;
-            opacity: 0.55;
-        }
-
-        .feature-band-content {
+        .engine-content,
+        .section-head {
             display: flex;
             align-items: center;
             gap: 1rem;
             position: relative;
-            z-index: 1;
+            z-index: 2;
         }
 
-        .feature-icon,
-        .section-icon {
+        .icon-box {
             width: 68px;
             height: 68px;
             border-radius: 18px;
             background: linear-gradient(180deg, #fff8ef, #fff1e2);
-            border: 1px solid rgba(249, 115, 22, 0.16);
+            border: 1px solid rgba(249,115,22,0.18);
             box-shadow: var(--shadow-soft);
             display: flex;
             align-items: center;
@@ -316,158 +334,149 @@ def render_shell() -> None:
             flex: 0 0 auto;
         }
 
-        .section-icon {
-            width: 62px;
-            height: 62px;
-            font-size: 1.8rem;
-        }
-
-        .feature-label,
-        .section-label {
-            color: var(--accent);
+        .label {
+            color: var(--orange-dark);
             text-transform: uppercase;
-            letter-spacing: 0.12em;
+            letter-spacing: 0.14em;
             font-size: 0.75rem;
-            font-weight: 800;
+            font-weight: 900;
             margin-bottom: 0.35rem;
         }
 
-        .feature-title,
-        .section-title {
+        .title {
             margin: 0;
-            font-size: 1.1rem;
+            color: var(--ink);
+            font-size: 1.28rem;
+            font-weight: 900;
+            letter-spacing: -0.03em;
         }
 
-        .feature-copy,
-        .section-copy {
+        .copy {
             margin: 0.45rem 0 0 0;
             color: var(--muted);
-            font-size: 0.95rem;
+            font-size: 0.96rem;
             line-height: 1.55;
+            max-width: 760px;
         }
 
-        .workspace-grid {
-            display: grid;
-            grid-template-columns: minmax(360px, 0.95fr) minmax(0, 1.45fr);
-            gap: 1.2rem;
-            align-items: start;
-            margin-top: 1rem;
-        }
-
-        .panel {
-            height: 100%;
-            padding: 1.25rem;
+        .panel-card {
+            padding: 1.35rem;
             border-radius: 26px;
-            border: 1px solid var(--line);
             background: var(--panel);
+            border: 1px solid var(--line);
             box-shadow: var(--shadow-soft);
+            min-height: 100%;
         }
 
-        .section-head {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .camera-shell {
-            padding: 0.45rem;
-            border-radius: 22px;
-            background: linear-gradient(180deg, #ffffff, #fff7ef);
-            border: 1px solid rgba(15, 23, 42, 0.08);
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        .camera-box {
+            margin-top: 1rem;
+            padding: 0.55rem;
+            border-radius: 23px;
+            background: linear-gradient(180deg, #fff, #fff7ef);
+            border: 1px solid rgba(15,23,42,0.08);
+            box-shadow: var(--shadow-soft);
             position: relative;
+            overflow: hidden;
         }
 
         .live-pill {
             position: absolute;
-            top: 1rem;
-            right: 1rem;
-            padding: 0.35rem 0.65rem;
+            top: 1.05rem;
+            right: 1.05rem;
+            z-index: 4;
+            padding: 0.36rem 0.68rem;
             border-radius: 999px;
-            background: rgba(15, 23, 42, 0.74);
+            background: rgba(15, 23, 42, 0.78);
             color: white;
-            font-size: 0.82rem;
-            font-weight: 700;
+            font-size: 0.78rem;
+            font-weight: 800;
             display: inline-flex;
             align-items: center;
-            gap: 0.45rem;
+            gap: 0.42rem;
+            letter-spacing: 0.03em;
         }
 
-        .live-pill::before {
-            content: "";
+        .live-dot {
             width: 8px;
             height: 8px;
             border-radius: 50%;
             background: #7ee787;
-            box-shadow: 0 0 10px rgba(126, 231, 135, 0.9);
+            box-shadow: 0 0 12px rgba(126,231,135,0.9);
+            display: inline-block;
         }
 
-        .preview-grid {
+        .result-layout {
             display: grid;
-            grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+            grid-template-columns: minmax(0, 1.05fr) minmax(330px, 0.95fr);
             gap: 1rem;
-            margin-top: 0.2rem;
+            margin-top: 1rem;
         }
 
         .preview-card,
         .result-card,
-        .probability-card {
-            padding: 0.95rem;
+        .prob-card,
+        .placeholder-card {
             border-radius: 22px;
-            border: 1px solid rgba(15, 23, 42, 0.10);
             background: linear-gradient(180deg, #ffffff, #fffaf5);
+            border: 1px solid rgba(15,23,42,0.10);
+            padding: 1rem;
+            box-shadow: 0 8px 24px rgba(17, 24, 39, 0.04);
         }
 
-        .image-shell {
-            border-radius: 18px;
-            overflow: hidden;
+        .card-title {
+            margin: 0 0 0.8rem 0;
+            font-size: 0.98rem;
+            font-weight: 900;
+            color: var(--ink);
+            letter-spacing: -0.02em;
         }
 
-        .subcard-title {
-            margin: 0 0 0.7rem 0;
-            font-size: 0.95rem;
-            font-weight: 800;
+        .selfie-img {
+            width: 100%;
+            height: 260px;
+            object-fit: cover;
+            border-radius: 17px;
+            border: 1px solid rgba(15,23,42,0.08);
+            display: block;
         }
 
         .result-card {
-            padding: 1rem 1.1rem;
             background:
-                radial-gradient(circle at top right, rgba(251, 191, 36, 0.18), transparent 34%),
-                linear-gradient(180deg, #fffdfa, #fff7ef);
+                radial-gradient(circle at 88% 10%, rgba(251,191,36,0.22), transparent 32%),
+                linear-gradient(180deg, #fffdfb, #fff7ef);
+            border-color: rgba(249,115,22,0.20);
         }
 
-        .result-header {
-            color: var(--ink);
+        .result-small {
+            color: var(--orange-dark);
             text-transform: uppercase;
-            letter-spacing: 0.08em;
-            font-size: 0.78rem;
-            font-weight: 800;
-            opacity: 0.76;
+            letter-spacing: 0.11em;
+            font-size: 0.75rem;
+            font-weight: 900;
+            margin-bottom: 0.75rem;
         }
 
-        .result-emotion {
+        .emotion-row {
             display: flex;
             align-items: center;
-            gap: 1rem;
-            margin-top: 0.7rem;
+            gap: 0.9rem;
         }
 
-        .result-emoji {
-            font-size: 3.3rem;
+        .emotion-emoji {
+            font-size: 3.6rem;
             line-height: 1;
         }
 
-        .result-value {
+        .emotion-text {
             margin: 0;
-            font-family: "Space Grotesk", sans-serif;
-            font-size: clamp(2rem, 4vw, 3.2rem);
-            font-weight: 700;
-            color: var(--accent-deep);
+            font-size: clamp(2rem, 3.2vw, 3.2rem);
             line-height: 0.95;
+            color: var(--orange-dark);
+            font-weight: 900;
+            letter-spacing: -0.06em;
         }
 
-        .confidence-bar {
+        .confidence {
             margin-top: 1rem;
             padding: 0.95rem 1rem;
             border-radius: 16px;
@@ -476,50 +485,37 @@ def render_shell() -> None:
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 0.8rem;
+            gap: 1rem;
         }
 
         .confidence-label {
             display: inline-flex;
             align-items: center;
-            gap: 0.6rem;
-            font-weight: 700;
+            gap: 0.5rem;
+            font-size: 0.92rem;
+            font-weight: 800;
         }
 
         .confidence-score {
-            font-family: "Space Grotesk", sans-serif;
-            font-size: clamp(1.8rem, 3vw, 2.4rem);
             color: #62e38f;
-            font-weight: 700;
-            margin: 0;
+            font-size: clamp(1.65rem, 2.4vw, 2.3rem);
+            font-weight: 900;
+            letter-spacing: -0.04em;
+            white-space: nowrap;
         }
 
-        .result-copy {
-            margin: 0.9rem 0 0 0;
+        .result-note {
             color: #5f4f43;
-            line-height: 1.5;
+            margin: 0.95rem 0 0 0;
+            font-size: 0.94rem;
+            line-height: 1.55;
         }
 
-        .placeholder-box {
-            min-height: 240px;
-            border-radius: 20px;
-            border: 1px dashed rgba(15, 23, 42, 0.14);
-            background:
-                radial-gradient(circle at 30% 30%, rgba(249, 115, 22, 0.14), transparent 22%),
-                linear-gradient(180deg, #fffdf9, #fff7ef);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--muted);
-            text-align: center;
-            padding: 1.4rem;
-        }
-
-        .probability-card {
+        .prob-card {
             margin-top: 1rem;
         }
 
-        .probability-grid {
+        .prob-grid {
             display: grid;
             grid-template-columns: repeat(7, minmax(0, 1fr));
             gap: 1rem;
@@ -530,8 +526,9 @@ def render_shell() -> None:
         }
 
         .prob-name {
-            font-size: 0.92rem;
-            font-weight: 700;
+            color: var(--ink);
+            font-size: 0.88rem;
+            font-weight: 800;
             margin-bottom: 0.45rem;
         }
 
@@ -549,31 +546,59 @@ def render_shell() -> None:
 
         .prob-value {
             margin-top: 0.45rem;
-            font-size: 0.9rem;
             color: var(--ink);
-            font-weight: 700;
+            font-size: 0.86rem;
+            font-weight: 800;
+        }
+
+        .placeholder-card {
+            margin-top: 1rem;
+            min-height: 235px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: var(--muted);
+            background:
+                radial-gradient(circle at 30% 25%, rgba(249,115,22,0.15), transparent 22%),
+                linear-gradient(180deg, #fffdf9, #fff7ef);
+            border-style: dashed;
+        }
+
+        .placeholder-icon {
+            font-size: 4.8rem;
+            margin-bottom: 0.7rem;
+        }
+
+        .placeholder-title {
+            color: var(--ink);
+            font-weight: 900;
+            font-size: 1.25rem;
+            margin-bottom: 0.35rem;
+        }
+
+        .placeholder-text {
+            max-width: 520px;
+            line-height: 1.55;
         }
 
         .app-footer {
             text-align: center;
             color: var(--muted);
-            font-size: 0.95rem;
-            margin-top: 1.1rem;
+            font-size: 0.9rem;
+            margin-top: 1.05rem;
+            font-weight: 600;
         }
 
-        [data-testid="stImage"] img {
-            border-radius: 18px;
-            border: 1px solid rgba(31, 41, 51, 0.08);
-            object-fit: cover;
+        [data-testid="stCameraInput"] {
+            padding: 0 !important;
         }
 
-        .preview-card [data-testid="stImage"] img,
-        .camera-shell [data-testid="stImage"] img {
-            border: none;
+        [data-testid="stCameraInput"] > div {
+            gap: 0.85rem;
         }
 
-        .stCameraInput > label {
-            font-family: "Space Grotesk", sans-serif;
+        [data-testid="stCameraInput"] label {
             position: absolute;
             width: 1px;
             height: 1px;
@@ -585,92 +610,105 @@ def render_shell() -> None:
             border: 0;
         }
 
-        [data-testid="stCameraInput"] {
-            padding-top: 0;
-        }
-
-        [data-testid="stCameraInput"] button {
-            border-radius: 999px;
-            background: linear-gradient(135deg, #ff7a1a, #d64b08);
-            color: white;
-            border: none;
-            font-weight: 700;
-            box-shadow: 0 12px 24px rgba(214, 75, 8, 0.24);
-            min-height: 50px;
-            padding: 0.8rem 1.2rem;
-            width: 100%;
-        }
-
         [data-testid="stCameraInput"] video,
         [data-testid="stCameraInput"] img {
             transform: scaleX(-1);
-            border-radius: 20px;
+            border-radius: 19px;
+            min-height: 380px;
+            object-fit: cover;
+            background: #000;
         }
 
-        [data-testid="stCaptionContainer"] {
-            margin-top: 0.35rem;
-        }
-
-        [data-testid="stHorizontalBlock"] {
-            align-items: stretch;
+        [data-testid="stCameraInput"] button {
+            min-height: 52px;
             width: 100%;
+            border-radius: 999px;
+            border: none;
+            background: linear-gradient(135deg, #ff7a1a, #d64b08);
+            color: white;
+            font-size: 0.98rem;
+            font-weight: 900;
+            box-shadow: 0 14px 26px rgba(214,75,8,0.24);
+            transition: all 0.2s ease;
         }
 
-        [data-testid="column"] {
-            width: 100%;
+        [data-testid="stCameraInput"] button:hover {
+            transform: translateY(-1px);
+            color: white;
+            box-shadow: 0 18px 32px rgba(214,75,8,0.32);
         }
 
-        [data-testid="column"] > div {
-            height: 100%;
+        [data-testid="stAlert"] {
+            border-radius: 18px;
         }
 
-        [data-testid="stVerticalBlock"] > [style*="flex-direction: column;"] {
-            gap: 0.9rem;
-        }
-
-        .stAppViewContainer,
-        .main,
-        .main > div {
-            width: 100%;
-        }
-
-        footer, header[data-testid="stHeader"] {
-            display: none;
-        }
-
-        @media (max-width: 900px) {
-            .hero,
-            .workspace-grid,
-            .preview-grid,
-            .probability-grid {
+        @media (max-width: 1100px) {
+            .hero-card {
                 grid-template-columns: 1fr;
             }
 
-            .hero {
-                padding: 1.2rem;
+            .hero-visual {
+                min-height: 190px;
+            }
+
+            .prob-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .result-layout {
+                grid-template-columns: 1fr;
+            }
+
+            [data-testid="stCameraInput"] video,
+            [data-testid="stCameraInput"] img {
+                min-height: 320px;
+            }
+        }
+
+        @media (max-width: 760px) {
+            .block-container {
+                padding: 0.75rem;
+            }
+
+            .hero-card {
+                padding: 1.3rem;
+                border-radius: 22px;
             }
 
             .hero-title {
-                font-size: 2.3rem;
-                gap: 0.75rem;
+                font-size: 2.35rem;
             }
 
-            .hero-avatar {
-                width: 180px;
-                height: 180px;
-                font-size: 5.8rem;
+            .hero-logo {
+                width: 50px;
+                height: 50px;
+                font-size: 1.6rem;
             }
 
-            .feature-band::after {
-                width: 70%;
+            .avatar-face {
+                width: 165px;
+                height: 165px;
+                font-size: 5.5rem;
             }
 
-            .block-container {
-                padding-top: 0.75rem;
+            .avatar-orbit {
+                width: 210px;
+                height: 210px;
             }
 
-            .stApp {
-                overflow-y: auto;
+            .mood-bubble {
+                width: 48px;
+                height: 48px;
+                font-size: 1.45rem;
+            }
+
+            .engine-content,
+            .section-head {
+                align-items: flex-start;
+            }
+
+            .prob-grid {
+                grid-template-columns: 1fr;
             }
         }
         </style>
@@ -681,239 +719,285 @@ def render_shell() -> None:
 
 def emotion_theme(emotion: str) -> dict:
     return EMOTION_STYLES.get(
-        emotion.lower(),
-        {"color": "#355070", "accent": "Expression captured", "emoji": "🙂"},
+        str(emotion).lower(),
+        {"color": "#64748b", "emoji": "🙂", "accent": "Expression captured"},
     )
 
 
-def render_probability_breakdown(emotion_scores: dict) -> str:
+def render_hero() -> None:
+    st.markdown(
+        """
+        <section class="hero-card">
+            <div>
+                <h1 class="hero-title">
+                    <span class="hero-logo">😊</span>
+                    <span>Emoti<span class="hero-accent">Avatar</span></span>
+                </h1>
+                <p class="hero-copy">
+                    Capture a selfie, detect your facial emotion using AI, and instantly review the dominant expression.
+                </p>
+                <div class="hero-chips">
+                    <span class="hero-chip">⚡ Real-time Capture</span>
+                    <span class="hero-chip">🧠 DeepFace AI Engine</span>
+                    <span class="hero-chip">🎭 Emotion Detection</span>
+                    <span class="hero-chip">📸 Selfie Analysis</span>
+                </div>
+            </div>
+
+            <div class="hero-visual">
+                <div class="avatar-orbit"></div>
+                <div class="mood-bubble bubble-happy">😊</div>
+                <div class="mood-bubble bubble-sad">😭</div>
+                <div class="mood-bubble bubble-angry">😠</div>
+                <div class="mood-bubble bubble-surprise">😮</div>
+                <div class="avatar-face">🙂</div>
+                <div class="face-bracket"><span></span></div>
+            </div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_engine_card() -> None:
+    st.markdown(
+        """
+        <section class="engine-card">
+            <div class="engine-content">
+                <div class="icon-box">🤖</div>
+                <div>
+                    <div class="label">Inference Engine</div>
+                    <h2 class="title">DeepFace Emotion Analysis</h2>
+                    <p class="copy">
+                        The system captures a selfie and predicts the dominant facial emotion such as happy,
+                        sad, angry, neutral, surprised, fear, or disgust.
+                    </p>
+                </div>
+            </div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_section_header(icon: str, label: str, title: str, copy: str) -> None:
+    st.markdown(
+        f"""
+        <div class="panel-card">
+            <div class="section-head">
+                <div class="icon-box">{icon}</div>
+                <div>
+                    <div class="label">{escape(label)}</div>
+                    <h3 class="title">{escape(title)}</h3>
+                    <p class="copy">{escape(copy)}</p>
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_probability_breakdown(scores: dict) -> str:
     order = ["happy", "neutral", "surprise", "sad", "angry", "fear", "disgust"]
     items = []
+
     for name in order:
         theme = emotion_theme(name)
-        score = float(emotion_scores.get(name, 0.0))
+        score = float(scores.get(name, 0.0) or 0.0)
         items.append(
             f"""
             <div class="prob-item">
-                <div class="prob-name">{name.title()}</div>
+                <div class="prob-name">{escape(name.title())}</div>
                 <div class="prob-track">
-                    <div class="prob-fill" style="width: {min(score, 100):.2f}%; background: {theme["color"]};"></div>
+                    <div class="prob-fill" style="width:{min(score, 100):.2f}%; background:{theme["color"]};"></div>
                 </div>
                 <div class="prob-value">{score:.2f}%</div>
             </div>
             """
         )
-    return '<div class="probability-grid">' + "".join(items) + "</div>"
+
+    return '<div class="prob-grid">' + "".join(items) + "</div>"
 
 
-render_shell()
+def rgb_to_data_uri(rgb_image: np.ndarray) -> str:
+    bgr_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
+    success, buffer = cv2.imencode(".jpg", bgr_image, [int(cv2.IMWRITE_JPEG_QUALITY), 92])
+    if not success:
+        return ""
+    encoded = base64.b64encode(buffer).decode("utf-8")
+    return f"data:image/jpeg;base64,{encoded}"
 
-st.markdown(
-    """
-    <section class="hero">
-        <div class="hero-copy-wrap">
-            <h1 class="hero-title">
-                <span class="hero-title-emoji">😊</span>
-                <span>Emoti<span class="hero-title-accent">Avatar</span></span>
-            </h1>
-            <p class="hero-copy">
-                Capture a selfie, detect your facial emotion using AI, and instantly review the dominant expression.
-            </p>
-            <div class="hero-chips">
-                <span class="hero-chip">⚡ Real-time Capture</span>
-                <span class="hero-chip">🧠 DeepFace AI Engine</span>
-                <span class="hero-chip">🎭 Emotion Detection</span>
-                <span class="hero-chip">📸 Selfie Analysis</span>
-            </div>
-        </div>
-        <div class="hero-visual">
-            <div class="hero-avatar-ring"></div>
-            <div class="hero-bubble bubble-1">😊</div>
-            <div class="hero-bubble bubble-2">😭</div>
-            <div class="hero-bubble bubble-3">😠</div>
-            <div class="hero-bubble bubble-4">😮</div>
-            <div class="hero-avatar">🙂</div>
-            <div class="hero-bracket"></div>
-            <div class="hero-bracket hero-bracket-bottom"></div>
-        </div>
-    </section>
-    <section class="feature-band">
-        <div class="feature-band-content">
-            <div class="feature-icon">🧠</div>
-            <div>
-                <div class="feature-label">Inference Engine</div>
-                <h2 class="feature-title">DeepFace Emotion Analysis</h2>
-                <p class="feature-copy">
-                    The system captures a selfie and predicts the dominant facial emotion such as happy, sad,
-                    angry, neutral, surprised, fear, or disgust.
-                </p>
-            </div>
-        </div>
-    </section>
-    """,
-    unsafe_allow_html=True,
-)
 
-left_col, right_col = st.columns([0.88, 1.12], gap="large")
-
-with left_col:
-    st.markdown(
-        """
-        <div class="panel">
-            <div class="section-head">
-                <div class="section-icon">📷</div>
-                <div>
-                    <div class="section-label">Camera Input</div>
-                    <h3 class="section-title">Take Selfie</h3>
-                    <p class="section-copy">Capture a clear front-facing selfie in good lighting for better results.</p>
-                </div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.markdown('<div class="camera-shell">', unsafe_allow_html=True)
-    st.markdown('<div class="live-pill">LIVE</div>', unsafe_allow_html=True)
-    photo = st.camera_input("Take Selfie")
-    st.markdown("</div>", unsafe_allow_html=True)
-
-with right_col:
-    st.markdown(
-        """
-        <div class="panel">
-            <div class="section-head">
-                <div class="section-icon">📊</div>
-                <div>
-                    <div class="section-label">Output</div>
-                    <h3 class="section-title">Emotion Result</h3>
-                    <p class="section-copy">
-                        Your captured selfie preview and AI emotion result will appear here.
-                    </p>
-                </div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-if photo is not None:
-    file_bytes = np.asarray(bytearray(photo.read()), dtype=np.uint8)
+def read_camera_image(uploaded_photo) -> np.ndarray | None:
+    file_bytes = np.asarray(bytearray(uploaded_photo.read()), dtype=np.uint8)
     frame = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
 
     if frame is None:
-        st.warning("Failed to decode the captured image.")
-    else:
-        frame = cv2.flip(frame, 1)
-        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        result_col, preview_col = right_col.columns([0.76, 1.24], gap="medium")
+        return None
 
-        try:
-            result = DeepFace.analyze(
-                rgb_frame,
-                actions=["emotion"],
-                enforce_detection=False,
-            )
-            emotion = result[0]["dominant_emotion"]
-            emotion_scores = result[0]["emotion"]
-            theme = emotion_theme(emotion)
-            confidence = float(emotion_scores.get(emotion, 0.0))
+    # Make output match the mirrored camera preview.
+    frame = cv2.flip(frame, 1)
+    return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-            st.markdown('<div class="preview-grid">', unsafe_allow_html=True)
-            preview_col, result_col = st.columns([1.05, 0.95], gap="medium")
 
-            with preview_col:
-                st.markdown('<div class="preview-card"><h4 class="subcard-title">Captured Selfie</h4><div class="image-shell">', unsafe_allow_html=True)
-                st.image(rgb_frame, use_container_width=True)
-                st.markdown("</div></div>", unsafe_allow_html=True)
+def analyze_emotion(rgb_frame: np.ndarray) -> tuple[str, dict]:
+    analysis = DeepFace.analyze(
+        img_path=rgb_frame,
+        actions=["emotion"],
+        enforce_detection=False,
+    )
 
-            with result_col:
-                st.markdown(
-                    f"""
-                    <div class="result-card">
-                        <div class="result-header">Detected Emotion</div>
-                        <div class="result-emotion">
-                            <div class="result-emoji">{theme["emoji"]}</div>
-                            <h3 class="result-value">{escape(emotion.title())}</h3>
-                        </div>
-                        <div class="confidence-bar">
-                            <div class="confidence-label">🛡️ Confidence Score</div>
-                            <div class="confidence-score">{confidence:.2f}%</div>
-                        </div>
-                        <p class="result-copy">
-                            This is the dominant emotion detected from your selfie using the DeepFace emotion analysis model.
-                        </p>
+    if isinstance(analysis, list):
+        analysis = analysis[0]
+
+    emotion = str(analysis.get("dominant_emotion", "neutral")).lower()
+    scores = analysis.get("emotion", {}) or {}
+    return emotion, scores
+
+
+def render_waiting_state() -> None:
+    st.markdown(
+        f"""
+        <div class="result-layout">
+            <div class="placeholder-card">
+                <div>
+                    <div class="placeholder-icon">📷</div>
+                    <div class="placeholder-title">Captured Selfie</div>
+                    <div class="placeholder-text">
+                        Your captured selfie preview will appear here after you take a photo.
                     </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-
-            st.markdown("</div>", unsafe_allow_html=True)
-            st.markdown(
-                f"""
-                <div class="probability-card">
-                    <h4 class="subcard-title">Emotion Probability Breakdown</h4>
-                    {render_probability_breakdown(emotion_scores)}
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-        except Exception:
-            with right_col:
-                st.markdown(
-                    """
-                    <div class="preview-card">
-                        <h4 class="subcard-title">Emotion Status</h4>
-                        <div class="placeholder-box">
-                            Face not detected. Retake the selfie with your face larger in frame and more even lighting.
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-
-else:
-    with right_col:
-        st.markdown(
-            """
-            <div class="preview-card">
-                <h4 class="subcard-title">Captured Selfie</h4>
-                <div class="placeholder-box">
-                    Your captured selfie preview will appear here.
                 </div>
             </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            """
+
             <div class="result-card">
-                <div class="result-header">Detected Emotion</div>
-                <div class="result-emotion">
-                    <div class="result-emoji">🙂</div>
-                    <h3 class="result-value">Waiting</h3>
+                <div class="result-small">Detected Emotion</div>
+                <div class="emotion-row">
+                    <div class="emotion-emoji">🙂</div>
+                    <h3 class="emotion-text">Waiting</h3>
                 </div>
-                <div class="confidence-bar">
+                <div class="confidence">
                     <div class="confidence-label">🛡️ Confidence Score</div>
                     <div class="confidence-score">0.00%</div>
                 </div>
-                <p class="result-copy">Your AI emotion result will appear here.</p>
+                <p class="result-note">Capture a selfie to start the DeepFace emotion analysis.</p>
             </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            f"""
-            <div class="probability-card">
-                <h4 class="subcard-title">Emotion Probability Breakdown</h4>
-                {render_probability_breakdown({})}
+        </div>
+
+        <div class="prob-card">
+            <h4 class="card-title">Emotion Probability Breakdown</h4>
+            {render_probability_breakdown({})}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_result_state(rgb_frame: np.ndarray, emotion: str, scores: dict) -> None:
+    theme = emotion_theme(emotion)
+    confidence = float(scores.get(emotion, 0.0) or 0.0)
+    data_uri = rgb_to_data_uri(rgb_frame)
+
+    st.markdown(
+        f"""
+        <div class="result-layout">
+            <div class="preview-card">
+                <h4 class="card-title">Captured Selfie</h4>
+                <img class="selfie-img" src="{data_uri}" alt="Captured selfie">
             </div>
-            """,
-            unsafe_allow_html=True,
-        )
+
+            <div class="result-card">
+                <div class="result-small">Detected Emotion</div>
+                <div class="emotion-row">
+                    <div class="emotion-emoji">{theme["emoji"]}</div>
+                    <h3 class="emotion-text">{escape(emotion.title())}</h3>
+                </div>
+                <div class="confidence">
+                    <div class="confidence-label">🛡️ Confidence Score</div>
+                    <div class="confidence-score">{confidence:.2f}%</div>
+                </div>
+                <p class="result-note">
+                    {escape(theme["accent"])}. This is the dominant emotion detected from your selfie using
+                    the DeepFace emotion analysis model.
+                </p>
+            </div>
+        </div>
+
+        <div class="prob-card">
+            <h4 class="card-title">Emotion Probability Breakdown</h4>
+            {render_probability_breakdown(scores)}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+inject_ui_css()
+render_hero()
+render_engine_card()
+
+left_col, right_col = st.columns([0.90, 1.35], gap="large")
+
+with left_col:
+    render_section_header(
+        icon="📷",
+        label="Camera Input",
+        title="Take Selfie",
+        copy="Capture a clear front-facing selfie in good lighting for better results.",
+    )
+
+    st.markdown(
+        """
+        <div class="camera-box">
+            <div class="live-pill"><span class="live-dot"></span> LIVE</div>
+        """,
+        unsafe_allow_html=True,
+    )
+    photo = st.camera_input("Take Photo")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+with right_col:
+    render_section_header(
+        icon="📊",
+        label="Output",
+        title="Emotion Result",
+        copy="Your captured selfie preview and AI emotion result will appear here.",
+    )
+
+    if photo is None:
+        render_waiting_state()
+    else:
+        rgb_frame = read_camera_image(photo)
+
+        if rgb_frame is None:
+            st.warning("Failed to decode the captured image. Please retake the photo.")
+        else:
+            with st.spinner("Analyzing your facial emotion..."):
+                try:
+                    emotion, scores = analyze_emotion(rgb_frame)
+                    render_result_state(rgb_frame, emotion, scores)
+                except Exception as exc:
+                    st.markdown(
+                        """
+                        <div class="placeholder-card">
+                            <div>
+                                <div class="placeholder-icon">⚠️</div>
+                                <div class="placeholder-title">Face not detected</div>
+                                <div class="placeholder-text">
+                                    Retake the selfie with your face larger in the frame and use more even lighting.
+                                </div>
+                            </div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    st.caption(f"Technical detail: {exc}")
 
 st.markdown(
     """
-    <div class="app-footer">© 2024 EmotiAvatar &nbsp;•&nbsp; Powered by DeepFace AI ❤️</div>
+    <div class="app-footer">
+        © 2024 EmotiAvatar &nbsp;•&nbsp; Powered by DeepFace AI ❤️
+    </div>
     """,
     unsafe_allow_html=True,
 )
