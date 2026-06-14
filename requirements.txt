@@ -1,11 +1,6 @@
 streamlit
-opencv-contrib-python
-flask
-flask-cors
-opencv-python
-mediapipe
 numpy
-opencv-python-headless
 deepface
 tensorflow
 tf-keras
+opencv-python-headless
