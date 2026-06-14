@@ -124,13 +124,6 @@ def render_shell() -> None:
             color: #ffb454;
         }
 
-        .hero-stars {
-            color: #ffd166;
-            font-size: 1.4rem;
-            letter-spacing: 0.2rem;
-            margin-left: 0.3rem;
-        }
-
         .hero-copy {
             color: rgba(255, 255, 255, 0.88);
             font-size: 0.98rem;
@@ -217,57 +210,47 @@ def render_shell() -> None:
 
         .hero-bracket {
             position: absolute;
-            width: 178px;
-            height: 178px;
-            border-radius: 24px;
-            border: 6px solid transparent;
+            inset: 20px;
             pointer-events: none;
         }
 
         .hero-bracket::before,
-        .hero-bracket::after {
+        .hero-bracket::after,
+        .hero-bracket-bottom::before,
+        .hero-bracket-bottom::after {
             content: "";
             position: absolute;
             width: 28px;
             height: 28px;
-            border-color: rgba(255, 255, 255, 0.95);
         }
 
         .hero-bracket::before {
-            top: -3px;
-            left: -3px;
+            top: 0;
+            left: 0;
             border-top: 6px solid rgba(255, 255, 255, 0.95);
             border-left: 6px solid rgba(255, 255, 255, 0.95);
             border-top-left-radius: 14px;
         }
 
         .hero-bracket::after {
-            top: -3px;
-            right: -3px;
+            top: 0;
+            right: 0;
             border-top: 6px solid rgba(255, 255, 255, 0.95);
             border-right: 6px solid rgba(255, 255, 255, 0.95);
             border-top-right-radius: 14px;
         }
 
-        .hero-bracket-bottom::before,
-        .hero-bracket-bottom::after {
-            content: "";
-            position: absolute;
-            bottom: -3px;
-            width: 28px;
-            height: 28px;
-            border-color: rgba(255, 255, 255, 0.95);
-        }
-
         .hero-bracket-bottom::before {
-            left: -3px;
+            bottom: 0;
+            left: 0;
             border-bottom: 6px solid rgba(255, 255, 255, 0.95);
             border-left: 6px solid rgba(255, 255, 255, 0.95);
             border-bottom-left-radius: 14px;
         }
 
         .hero-bracket-bottom::after {
-            right: -3px;
+            bottom: 0;
+            right: 0;
             border-bottom: 6px solid rgba(255, 255, 255, 0.95);
             border-right: 6px solid rgba(255, 255, 255, 0.95);
             border-bottom-right-radius: 14px;
@@ -296,6 +279,18 @@ def render_shell() -> None:
                 linear-gradient(180deg, transparent 0%, rgba(249, 115, 22, 0.06) 100%);
             mask-image: linear-gradient(90deg, transparent 0%, black 18%);
             opacity: 0.95;
+        }
+
+        .feature-band::before {
+            content: "";
+            position: absolute;
+            right: 0;
+            bottom: 10px;
+            width: 44%;
+            height: 90px;
+            background:
+                radial-gradient(120px 36px at 0 100%, transparent 68%, rgba(249, 115, 22, 0.32) 69%, transparent 71%) 0 0 / 140px 36px repeat-x;
+            opacity: 0.55;
         }
 
         .feature-band-content {
@@ -381,6 +376,7 @@ def render_shell() -> None:
             background: linear-gradient(180deg, #ffffff, #fff7ef);
             border: 1px solid rgba(15, 23, 42, 0.08);
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            position: relative;
         }
 
         .live-pill {
@@ -421,6 +417,11 @@ def render_shell() -> None:
             border-radius: 22px;
             border: 1px solid rgba(15, 23, 42, 0.10);
             background: linear-gradient(180deg, #ffffff, #fffaf5);
+        }
+
+        .image-shell {
+            border-radius: 18px;
+            overflow: hidden;
         }
 
         .subcard-title {
@@ -566,6 +567,11 @@ def render_shell() -> None:
             object-fit: cover;
         }
 
+        .preview-card [data-testid="stImage"] img,
+        .camera-shell [data-testid="stImage"] img {
+            border: none;
+        }
+
         .stCameraInput > label {
             font-family: "Space Grotesk", sans-serif;
             position: absolute;
@@ -581,10 +587,6 @@ def render_shell() -> None:
 
         [data-testid="stCameraInput"] {
             padding-top: 0;
-        }
-
-        [data-testid="stCameraInput"] > div {
-            position: relative;
         }
 
         [data-testid="stCameraInput"] button {
@@ -713,7 +715,6 @@ st.markdown(
             <h1 class="hero-title">
                 <span class="hero-title-emoji">😊</span>
                 <span>Emoti<span class="hero-title-accent">Avatar</span></span>
-                <span class="hero-stars">✦</span>
             </h1>
             <p class="hero-copy">
                 Capture a selfie, detect your facial emotion using AI, and instantly review the dominant expression.
@@ -821,15 +822,9 @@ if photo is not None:
             preview_col, result_col = st.columns([1.05, 0.95], gap="medium")
 
             with preview_col:
-                st.markdown(
-                    """
-                    <div class="preview-card">
-                        <h4 class="subcard-title">Captured Selfie</h4>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+                st.markdown('<div class="preview-card"><h4 class="subcard-title">Captured Selfie</h4><div class="image-shell">', unsafe_allow_html=True)
                 st.image(rgb_frame, use_container_width=True)
+                st.markdown("</div></div>", unsafe_allow_html=True)
 
             with result_col:
                 st.markdown(
@@ -883,7 +878,7 @@ else:
             <div class="preview-card">
                 <h4 class="subcard-title">Captured Selfie</h4>
                 <div class="placeholder-box">
-                    The captured selfie preview and AI emotion result will appear here after you take a photo.
+                    Your captured selfie preview will appear here.
                 </div>
             </div>
             """,
@@ -901,9 +896,7 @@ else:
                     <div class="confidence-label">🛡️ Confidence Score</div>
                     <div class="confidence-score">0.00%</div>
                 </div>
-                <p class="result-copy">
-                    Capture a selfie to populate the emotion label, confidence score, and probability breakdown.
-                </p>
+                <p class="result-copy">Your AI emotion result will appear here.</p>
             </div>
             """,
             unsafe_allow_html=True,
@@ -920,7 +913,7 @@ else:
 
 st.markdown(
     """
-    <div class="app-footer">© 2024 EmotiAvatar · Powered by DeepFace AI ♥</div>
+    <div class="app-footer">© 2024 EmotiAvatar &nbsp;•&nbsp; Powered by DeepFace AI ❤️</div>
     """,
     unsafe_allow_html=True,
 )
