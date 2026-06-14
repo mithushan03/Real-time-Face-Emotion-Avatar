@@ -191,100 +191,24 @@ def inject_ui_css() -> None:
             justify-content: center;
         }
 
-        .avatar-orbit {
-            position: absolute;
-            width: 260px;
-            height: 260px;
-            border-radius: 50%;
-            border: 1px dashed rgba(255,224,178,0.38);
+        .code-panel {
+            width: 100%;
+            max-width: 620px;
+            border-radius: 12px;
+            background: rgba(15, 23, 42, 0.92);
+            box-shadow: 0 18px 42px rgba(0, 0, 0, 0.24);
+            padding: 1rem 1.2rem;
+            overflow: hidden;
         }
 
-        .avatar-orbit::before {
-            content: "";
-            position: absolute;
-            inset: -24px;
-            border-radius: 50%;
-            border: 1px dashed rgba(255,224,178,0.18);
+        .code-panel pre {
+            margin: 0;
+            color: #fff7ed;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.9rem;
+            line-height: 1.55;
+            white-space: pre-wrap;
         }
-
-        .avatar-face {
-            position: relative;
-            width: 205px;
-            height: 205px;
-            border-radius: 50%;
-            background:
-                radial-gradient(circle at 38% 30%, #ffe1bd 0 18%, #ffb47e 42%, #dc6f2c 75%, #5c2f1e 100%);
-            box-shadow: 0 26px 50px rgba(0,0,0,0.28);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 7.2rem;
-        }
-
-        .face-bracket {
-            position: absolute;
-            inset: 34px;
-            pointer-events: none;
-        }
-
-        .face-bracket::before,
-        .face-bracket::after,
-        .face-bracket span::before,
-        .face-bracket span::after {
-            content: "";
-            position: absolute;
-            width: 30px;
-            height: 30px;
-            border-color: rgba(255,255,255,0.95);
-            border-style: solid;
-        }
-
-        .face-bracket::before {
-            top: 0;
-            left: 0;
-            border-width: 6px 0 0 6px;
-            border-top-left-radius: 14px;
-        }
-
-        .face-bracket::after {
-            top: 0;
-            right: 0;
-            border-width: 6px 6px 0 0;
-            border-top-right-radius: 14px;
-        }
-
-        .face-bracket span::before {
-            bottom: 0;
-            left: 0;
-            border-width: 0 0 6px 6px;
-            border-bottom-left-radius: 14px;
-        }
-
-        .face-bracket span::after {
-            bottom: 0;
-            right: 0;
-            border-width: 0 6px 6px 0;
-            border-bottom-right-radius: 14px;
-        }
-
-        .mood-bubble {
-            position: absolute;
-            width: 62px;
-            height: 62px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.92);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            box-shadow: 0 14px 26px rgba(0,0,0,0.17);
-            border: 4px solid rgba(255,255,255,0.45);
-        }
-
-        .bubble-happy { top: 6px; left: 44px; }
-        .bubble-sad { top: 6px; right: 38px; }
-        .bubble-angry { bottom: 28px; left: 12px; }
-        .bubble-surprise { bottom: 32px; right: 2px; }
 
         .engine-card {
             position: relative;
@@ -582,6 +506,23 @@ def inject_ui_css() -> None:
             line-height: 1.55;
         }
 
+        .snippet-card {
+            margin-top: 1rem;
+            border-radius: 12px;
+            background: #1b1f2a;
+            padding: 1rem 1.1rem;
+            box-shadow: 0 16px 36px rgba(0, 0, 0, 0.18);
+        }
+
+        .snippet-card pre {
+            margin: 0;
+            color: #ffffff;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.88rem;
+            line-height: 1.55;
+            white-space: pre-wrap;
+        }
+
         .app-footer {
             text-align: center;
             color: var(--muted);
@@ -685,23 +626,6 @@ def inject_ui_css() -> None:
                 font-size: 1.6rem;
             }
 
-            .avatar-face {
-                width: 165px;
-                height: 165px;
-                font-size: 5.5rem;
-            }
-
-            .avatar-orbit {
-                width: 210px;
-                height: 210px;
-            }
-
-            .mood-bubble {
-                width: 48px;
-                height: 48px;
-                font-size: 1.45rem;
-            }
-
             .engine-content,
             .section-head {
                 align-items: flex-start;
@@ -745,13 +669,17 @@ def render_hero() -> None:
             </div>
 
             <div class="hero-visual">
-                <div class="avatar-orbit"></div>
-                <div class="mood-bubble bubble-happy">😊</div>
-                <div class="mood-bubble bubble-sad">😭</div>
-                <div class="mood-bubble bubble-angry">😠</div>
-                <div class="mood-bubble bubble-surprise">😮</div>
-                <div class="avatar-face">🙂</div>
-                <div class="face-bracket"><span></span></div>
+                <div class="code-panel">
+                    <pre>&lt;div class="hero-visual"&gt;
+    &lt;div class="avatar-orbit"&gt;&lt;/div&gt;
+    &lt;div class="mood-bubble bubble-happy"&gt;😊&lt;/div&gt;
+    &lt;div class="mood-bubble bubble-sad"&gt;😭&lt;/div&gt;
+    &lt;div class="mood-bubble bubble-angry"&gt;😠&lt;/div&gt;
+    &lt;div class="mood-bubble bubble-surprise"&gt;😮&lt;/div&gt;
+    &lt;div class="avatar-face"&gt;🙂&lt;/div&gt;
+    &lt;div class="face-bracket"&gt;&lt;span&gt;&lt;/span&gt;&lt;/div&gt;
+&lt;/div&gt;</pre>
+                </div>
             </div>
         </section>
         """,
@@ -858,7 +786,7 @@ def analyze_emotion(rgb_frame: np.ndarray) -> tuple[str, dict]:
 
 def render_waiting_state() -> None:
     st.markdown(
-        f"""
+        """
         <div class="result-layout">
             <div class="placeholder-card">
                 <div>
@@ -870,23 +798,19 @@ def render_waiting_state() -> None:
                 </div>
             </div>
 
-            <div class="result-card">
-                <div class="result-small">Detected Emotion</div>
-                <div class="emotion-row">
-                    <div class="emotion-emoji">🙂</div>
-                    <h3 class="emotion-text">Waiting</h3>
-                </div>
-                <div class="confidence">
-                    <div class="confidence-label">🛡️ Confidence Score</div>
-                    <div class="confidence-score">0.00%</div>
-                </div>
-                <p class="result-note">Capture a selfie to start the DeepFace emotion analysis.</p>
+            <div class="snippet-card">
+                <pre>&lt;div class="result-card"&gt;
+    &lt;div class="result-small"&gt;Detected Emotion&lt;/div&gt;
+    &lt;div class="emotion-row"&gt;
+        &lt;div class="emotion-emoji"&gt;🙂&lt;/div&gt;
+        &lt;h3 class="emotion-text"&gt;Waiting&lt;/h3&gt;
+    &lt;/div&gt;
+    &lt;div class="confidence"&gt;
+        &lt;div class="confidence-label"&gt;🛡️ Confidence Score&lt;/div&gt;
+        &lt;div class="confidence-score"&gt;0.00%&lt;/div&gt;
+    &lt;/div&gt;
+&lt;/div&gt;</pre>
             </div>
-        </div>
-
-        <div class="prob-card">
-            <h4 class="card-title">Emotion Probability Breakdown</h4>
-            {render_probability_breakdown({})}
         </div>
         """,
         unsafe_allow_html=True,
