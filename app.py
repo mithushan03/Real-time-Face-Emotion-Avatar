@@ -11,8 +11,8 @@ try:
     from deepface import DeepFace
 except ValueError as exc:
     if "requires tf-keras package" in str(exc):
-        st.set_page_config(page_title="Emotion Detector", layout="centered")
-        st.title("😊 Real-Time Face Emotion Detector")
+        st.set_page_config(page_title="EmotiAvatar", layout="centered")
+        st.title("EmotiAvatar")
         st.error(
             "DeepFace could not start because `tf-keras` is missing for the installed "
             "TensorFlow version. Install dependencies again with "
@@ -21,7 +21,7 @@ except ValueError as exc:
         st.stop()
     raise
 
-st.set_page_config(page_title="Emotion Detector", layout="wide")
+st.set_page_config(page_title="EmotiAvatar", layout="wide")
 
 EMOTION_STYLES = {
     "happy": {"color": "#f28c28", "accent": "Radiant and upbeat"},
@@ -41,31 +41,33 @@ def render_shell() -> None:
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Manrope:wght@400;600;700&display=swap');
 
         :root {
-            --bg: #f3ede2;
-            --ink: #1f2933;
-            --muted: #58626c;
-            --panel: rgba(255, 251, 245, 0.88);
-            --panel-strong: rgba(255, 255, 255, 0.92);
-            --line: rgba(31, 41, 51, 0.09);
-            --shadow: 0 20px 60px rgba(61, 47, 25, 0.10);
-            --shadow-soft: 0 12px 30px rgba(31, 41, 51, 0.05);
-            --accent: #cb7a2f;
+            --bg: #f4efe6;
+            --ink: #16212f;
+            --muted: #5d6773;
+            --panel: rgba(255, 252, 247, 0.90);
+            --panel-strong: rgba(255, 255, 255, 0.95);
+            --line: rgba(22, 33, 47, 0.08);
+            --shadow: 0 24px 70px rgba(55, 43, 24, 0.10);
+            --shadow-soft: 0 14px 30px rgba(22, 33, 47, 0.05);
+            --accent: #bf6c2c;
+            --accent-deep: #7b3f1d;
+            --navy: #1c3556;
         }
 
         .stApp {
             background:
-                radial-gradient(circle at top left, rgba(223, 171, 73, 0.22), transparent 30%),
-                radial-gradient(circle at top right, rgba(92, 134, 216, 0.14), transparent 24%),
-                linear-gradient(180deg, #faf6ef 0%, #efe5d6 100%);
+                radial-gradient(circle at top left, rgba(235, 191, 96, 0.22), transparent 24%),
+                radial-gradient(circle at top right, rgba(71, 117, 201, 0.12), transparent 20%),
+                linear-gradient(180deg, #fbf7f0 0%, #eee3d3 100%);
             color: var(--ink);
             font-family: "Manrope", sans-serif;
         }
 
         .block-container {
-            padding-top: 0.75rem;
-            padding-bottom: 0.75rem;
-            padding-left: 1.2rem;
-            padding-right: 1.2rem;
+            padding-top: 0.9rem;
+            padding-bottom: 0.9rem;
+            padding-left: 1rem;
+            padding-right: 1rem;
             max-width: 100vw;
             width: 100%;
         }
@@ -78,67 +80,68 @@ def render_shell() -> None:
         .app-shell {
             display: flex;
             flex-direction: column;
-            gap: 0.75rem;
+            gap: 0.85rem;
             width: 100%;
         }
 
         .topbar {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) 220px;
-            gap: 0.75rem;
+            grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.65fr);
+            gap: 0.85rem;
             align-items: stretch;
             width: 100%;
         }
 
         .hero {
-            padding: 1.15rem 1.35rem;
+            padding: 1.35rem 1.5rem;
             border: 1px solid var(--line);
-            border-radius: 22px;
+            border-radius: 26px;
             background:
-                linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,243,216,0.82)),
-                linear-gradient(135deg, rgba(232,177,88,0.14), rgba(84,126,206,0.08));
+                linear-gradient(135deg, rgba(255,255,255,0.96), rgba(255,244,220,0.86)),
+                linear-gradient(135deg, rgba(226,170,82,0.14), rgba(76,118,193,0.08));
             box-shadow: var(--shadow);
             overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
+            display: grid;
+            grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+            gap: 1rem;
+            align-items: end;
         }
 
         .hero-kicker {
             display: inline-block;
-            padding: 0.35rem 0.7rem;
+            padding: 0.38rem 0.78rem;
             border-radius: 999px;
-            background: rgba(31, 41, 51, 0.06);
-            color: var(--muted);
-            font-size: 0.8rem;
+            background: rgba(28, 53, 86, 0.07);
+            color: var(--navy);
+            font-size: 0.76rem;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.08em;
+            letter-spacing: 0.09em;
         }
 
         .hero-title {
-            margin: 0.55rem 0 0.2rem 0;
-            font-size: clamp(1.7rem, 3vw, 2.5rem);
+            margin: 0.7rem 0 0.4rem 0;
+            font-size: clamp(2rem, 3vw, 3rem);
             line-height: 0.98;
         }
 
         .hero-copy {
             color: var(--muted);
-            font-size: 0.9rem;
-            line-height: 1.45;
+            font-size: 0.98rem;
+            line-height: 1.58;
             margin: 0;
         }
 
-        .summary-grid {
-            display: flex;
-            width: 100%;
+        .hero-side {
+            display: grid;
+            gap: 0.75rem;
         }
 
         .hero-stat {
-            padding: 1rem 1.05rem;
-            border-radius: 22px;
-            background: rgba(255, 255, 255, 0.72);
-            border: 1px solid rgba(31, 41, 51, 0.08);
+            padding: 1rem 1.1rem;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.76);
+            border: 1px solid rgba(22, 33, 47, 0.07);
             box-shadow: var(--shadow-soft);
             display: flex;
             flex-direction: column;
@@ -155,16 +158,23 @@ def render_shell() -> None:
         }
 
         .hero-stat-value {
-            margin-top: 0.25rem;
+            margin-top: 0.2rem;
             font-family: "Space Grotesk", sans-serif;
-            font-size: 1.05rem;
+            font-size: 1rem;
             font-weight: 700;
+        }
+
+        .workspace-grid {
+            display: grid;
+            grid-template-columns: minmax(360px, 0.9fr) minmax(0, 1.1fr);
+            gap: 0.85rem;
+            align-items: start;
         }
 
         .panel {
             height: 100%;
-            padding: 1rem;
-            border-radius: 22px;
+            padding: 1.1rem;
+            border-radius: 24px;
             border: 1px solid var(--line);
             background: var(--panel);
             backdrop-filter: blur(12px);
@@ -177,14 +187,14 @@ def render_shell() -> None:
 
         .panel-title {
             margin: 0 0 0.35rem 0;
-            font-size: 1rem;
+            font-size: 1.05rem;
         }
 
         .panel-copy {
             margin: 0;
             color: var(--muted);
             line-height: 1.55;
-            font-size: 0.92rem;
+            font-size: 0.93rem;
         }
 
         .eyebrow {
@@ -203,8 +213,8 @@ def render_shell() -> None:
         }
 
         .emotion-card {
-            padding: 1.2rem;
-            border-radius: 20px;
+            padding: 1.25rem;
+            border-radius: 22px;
             color: white;
             box-shadow: 0 20px 50px rgba(31, 41, 51, 0.14);
         }
@@ -265,6 +275,12 @@ def render_shell() -> None:
             justify-content: center;
         }
 
+        .camera-frame {
+            padding: 0.35rem;
+            border-radius: 24px;
+            background: linear-gradient(135deg, rgba(28,53,86,0.08), rgba(191,108,44,0.08));
+        }
+
         [data-testid="stImage"] img {
             border-radius: 18px;
             border: 1px solid rgba(31, 41, 51, 0.08);
@@ -291,7 +307,7 @@ def render_shell() -> None:
 
         [data-testid="stCameraInput"] button {
             border-radius: 999px;
-            background: linear-gradient(135deg, #cb7a2f, #a9572a);
+            background: linear-gradient(135deg, var(--accent), var(--accent-deep));
             color: white;
             border: none;
             font-weight: 700;
@@ -323,6 +339,10 @@ def render_shell() -> None:
             height: 100%;
         }
 
+        [data-testid="stVerticalBlock"] > [style*="flex-direction: column;"] {
+            gap: 0.85rem;
+        }
+
         .stAppViewContainer,
         .main,
         .main > div {
@@ -335,7 +355,8 @@ def render_shell() -> None:
 
         @media (max-width: 900px) {
             .topbar,
-            .summary-grid,
+            .hero,
+            .workspace-grid,
             .metrics-row {
                 grid-template-columns: 1fr;
             }
@@ -370,18 +391,27 @@ st.markdown(
         <div class="topbar">
             <section class="hero">
                 <div>
-                    <span class="hero-kicker">Emotion Inference Demo</span>
-                    <h1 class="hero-title">Take Selfie. Get Emotion.</h1>
+                    <span class="hero-kicker">EmotiAvatar • Facial Emotion Analysis</span>
+                    <h1 class="hero-title">EmotiAvatar</h1>
                     <p class="hero-copy">
-                        A minimal browser-based emotion detector with single-shot analysis.
+                        A university-grade interactive emotion recognition interface built for
+                        browser-based capture, DeepFace inference, and presentation-quality results.
                     </p>
                 </div>
-            </section>
-            <div class="summary-grid">
-                <div class="hero-stat">
-                    <div class="hero-stat-label">Model</div>
-                    <div class="hero-stat-value">DeepFace Emotion</div>
+                <div class="hero-side">
+                    <div class="hero-stat">
+                        <div class="hero-stat-label">Project Focus</div>
+                        <div class="hero-stat-value">Human emotion detection</div>
+                    </div>
+                    <div class="hero-stat">
+                        <div class="hero-stat-label">Inference Model</div>
+                        <div class="hero-stat-value">DeepFace emotion pipeline</div>
+                    </div>
                 </div>
+            </section>
+            <div class="hero-stat">
+                <div class="hero-stat-label">Capture Mode</div>
+                <div class="hero-stat-value">Single-shot mirrored selfie</div>
             </div>
         </div>
     </div>
@@ -389,31 +419,36 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-left_col, right_col = st.columns([0.92, 1.08], gap="large")
+st.markdown('<div class="workspace-grid">', unsafe_allow_html=True)
+left_col, right_col = st.columns([0.88, 1.12], gap="large")
 
 with left_col:
     st.markdown(
         """
         <div class="panel panel-strong">
-            <div class="eyebrow">Camera</div>
+            <div class="eyebrow">Capture Interface</div>
             <h3 class="panel-title">Take Selfie</h3>
             <p class="panel-copy">
-                Capture one clear face photo to analyze the dominant emotion.
+                Capture a clear portrait frame. EmotiAvatar mirrors the camera input for a familiar
+                selfie experience before sending the image to the emotion analysis pipeline.
             </p>
         </div>
         """,
         unsafe_allow_html=True,
     )
+    st.markdown('<div class="camera-frame">', unsafe_allow_html=True)
     photo = st.camera_input("Take Selfie")
+    st.markdown("</div>", unsafe_allow_html=True)
 
 with right_col:
     st.markdown(
         """
         <div class="panel">
-            <div class="eyebrow">Analysis</div>
-            <h3 class="panel-title">Result</h3>
+            <div class="eyebrow">Analysis Output</div>
+            <h3 class="panel-title">Emotion Assessment</h3>
             <p class="panel-copy">
-                The captured selfie is mirrored, analyzed, and shown here.
+                The result view presents the dominant detected emotion together with a processed
+                mirrored preview from the captured selfie.
             </p>
         </div>
         """,
@@ -464,15 +499,15 @@ if photo is not None:
                                 <div class="metric-value">Selfie frame</div>
                             </div>
                             <div class="metric-card">
-                                <div class="metric-label">Mode</div>
-                                <div class="metric-value">Single-shot</div>
+                                <div class="metric-label">Assessment</div>
+                                <div class="metric-value">Dominant expression</div>
                             </div>
                         </div>
                     </div>
                     """,
                     unsafe_allow_html=True,
                 )
-                st.caption("Prediction is based on the dominant facial expression in the current capture.")
+                st.caption("EmotiAvatar reports the strongest facial emotion inferred from the captured frame.")
         except Exception:
             cv2.putText(
                 rgb_frame,
@@ -498,18 +533,20 @@ if photo is not None:
                 )
 
         with preview_col:
-            st.image(rgb_frame, caption="Selfie preview", use_container_width=True)
+            st.image(rgb_frame, caption="EmotiAvatar preview", use_container_width=True)
 else:
     with right_col:
         st.markdown(
             """
             <div class="panel status-empty">
                 <div class="eyebrow">Waiting</div>
-                <h3 class="panel-title">Take Selfie to begin</h3>
+                <h3 class="panel-title">Capture a selfie to begin analysis</h3>
                 <p class="panel-copy">
-                    The result card and preview will appear here after you capture an image.
+                    The result card and processed preview will appear here after a capture is taken.
                 </p>
             </div>
             """,
             unsafe_allow_html=True,
         )
+
+st.markdown("</div>", unsafe_allow_html=True)
