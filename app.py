@@ -62,9 +62,12 @@ def render_shell() -> None:
         }
 
         .block-container {
-            padding-top: 1rem;
-            padding-bottom: 1rem;
-            max-width: 1240px;
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+            padding-left: 1.2rem;
+            padding-right: 1.2rem;
+            max-width: 100vw;
+            width: 100%;
         }
 
         h1, h2, h3 {
@@ -76,6 +79,7 @@ def render_shell() -> None:
             display: flex;
             flex-direction: column;
             gap: 0.75rem;
+            width: 100%;
         }
 
         .topbar {
@@ -83,6 +87,7 @@ def render_shell() -> None:
             grid-template-columns: minmax(0, 1fr) 220px;
             gap: 0.75rem;
             align-items: stretch;
+            width: 100%;
         }
 
         .hero {
@@ -126,6 +131,7 @@ def render_shell() -> None:
 
         .summary-grid {
             display: flex;
+            width: 100%;
         }
 
         .hero-stat {
@@ -137,6 +143,7 @@ def render_shell() -> None:
             display: flex;
             flex-direction: column;
             justify-content: center;
+            width: 100%;
         }
 
         .hero-stat-label {
@@ -305,6 +312,21 @@ def render_shell() -> None:
 
         [data-testid="stHorizontalBlock"] {
             align-items: stretch;
+            width: 100%;
+        }
+
+        [data-testid="column"] {
+            width: 100%;
+        }
+
+        [data-testid="column"] > div {
+            height: 100%;
+        }
+
+        .stAppViewContainer,
+        .main,
+        .main > div {
+            width: 100%;
         }
 
         footer, header[data-testid="stHeader"] {
