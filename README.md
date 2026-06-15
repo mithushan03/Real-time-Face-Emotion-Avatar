@@ -26,11 +26,6 @@ EmotiAvatar captures a selfie, analyzes the user’s facial expression, and disp
 
 ---
 
-## 🖼️ App Preview
-
-![EmotiAvatar UI](assets/emotiavatar-ui.png)
-
----
 
 ## 🚀 Live Application
 
