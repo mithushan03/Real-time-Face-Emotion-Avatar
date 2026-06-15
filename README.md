@@ -1,54 +1,65 @@
-# Real-time Face Emotion Avatar
+# 😊 EmotiAvatar
 
-This project is a Streamlit app that opens your webcam, detects a face in real time, and shows the dominant emotion using DeepFace.
+A modern AI-powered facial emotion detection web application built with **Streamlit** and **DeepFace**.  
+EmotiAvatar captures a selfie, analyzes the user’s facial expression, and displays the dominant emotion with confidence scores and a clean visual breakdown.
 
-## Features
+🔗 **Live Demo:** [https://emotiavatar.streamlit.app/](https://emotiavatar.streamlit.app/)
 
-- Real-time webcam feed in Streamlit
-- Face emotion analysis with DeepFace
-- On-screen emotion label overlay
-- Clear setup message if TensorFlow is installed without `tf-keras`
+---
 
-## Requirements
+## ✨ Features
 
-- Python 3.10 or 3.11 is recommended
-- A working webcam
+- 📸 Capture selfie directly from the browser
+- 🧠 AI-based facial emotion detection using DeepFace
+- 🎭 Detects multiple emotions:
+  - Happy
+  - Sad
+  - Angry
+  - Neutral
+  - Surprise
+  - Fear
+  - Disgust
+- 📊 Displays dominant emotion with confidence score
+- 📈 Emotion probability breakdown with visual bars
+- 🎨 Clean modern dashboard UI
+- 💻 Built using Streamlit for fast deployment
 
-## Install
+---
 
-Create and activate a virtual environment, then install dependencies:
+## 🖼️ App Preview
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-```
+![EmotiAvatar UI](assets/emotiavatar-ui.png)
 
-## Run
+---
 
-Start the Streamlit app with:
+## 🚀 Live Application
 
-```powershell
-.\.venv\Scripts\streamlit.exe run app.py
-```
+Try the app here:
 
-Then open the local Streamlit URL shown in the terminal, enable `Start Camera`, and allow webcam access if prompted.
+👉 [EmotiAvatar Streamlit App](https://emotiavatar.streamlit.app/)
 
-## Project Files
+---
 
-- `app.py` - Streamlit app entrypoint
-- `requirements.txt` - Python dependencies
+## 🛠️ Tech Stack
 
-## Troubleshooting
+| Technology | Purpose |
+|---|---|
+| Python | Main programming language |
+| Streamlit | Web application framework |
+| DeepFace | Facial emotion analysis |
+| OpenCV | Image processing |
+| NumPy | Image data handling |
+| TensorFlow | Deep learning backend |
 
-If you see an error about TensorFlow requiring `tf-keras`, reinstall dependencies:
+---
 
-```powershell
-pip install -r requirements.txt
-```
+## 📂 Project Structure
 
-If the webcam does not start:
-
-- Check that no other application is using the camera
-- Confirm the browser has permission to access the webcam
-- Verify OpenCV can access camera index `0` on your machine
+```text
+EmotiAvatar/
+│
+├── app.py
+├── requirements.txt
+├── README.md
+└── assets/
+    └── emotiavatar-ui.png
